@@ -1,0 +1,13 @@
+.env
+.env.local
+*.db
+Railway/
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+node_modules/
+rapt_monitor.db
+*.log
+.vscode/
+.idea/
