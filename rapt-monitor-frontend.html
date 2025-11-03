@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAPT Monitor - Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #f4a460;
+            --secondary: #2d2d2d;
+            --accent: #1db954;
+            --danger: #e74c3c;
+            --light: #f5f5f5;
+            --border: #ddd;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--secondary);
+            color: #333;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, var(--primary), #d48948);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar h1 {
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .status-badge {
+            background: var(--accent);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        .status-badge.active {
+            background: var(--accent);
+        }
+
+        .status-badge.diacetyl {
+            background: var(--danger);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .card.alert {
+            border-left: 5px solid var(--danger);
+            background: #fff5f5;
+        }
+
+        .card.alert-success {
+            border-left: 5px solid var(--accent);
+            background: #f0fff4;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .metric:last-child {
+            margin-bottom: 0;
+            border-bottom: none;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .metric-value.temperature {
+            color: #e67e22;
+        }
+
+        .metric-value.attenuation {
+            color: #3498db;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), #d48948);
+            border-radius: 4px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 2rem;
+        }
+
+        .chart-wrapper {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+
+        .alert-message {
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 4px;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            color: #333;
+        }
+
+        .alert-message.danger {
+            background: #f8d7da;
+            border-left-color: var(--danger);
+        }
+
+        .alert-message.success {
+            background: #d4edda;
+            border-left-color: var(--accent);
+        }
+
+        .buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #d48948;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(244, 164, 96, 0.3);
+        }
+
+        .btn-secondary {
+            background: #666;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #444;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #333;
+            font-weight: 500;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(244, 164, 96, 0.1);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #666;
+            font-weight: 500;
+            position: relative;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .stat-small {
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .stat-small-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .stat-small-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .spinner {
+            border: 4px solid var(--border);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .recommendation {
+            background: #e8f5e9;
+            border-left: 4px solid var(--accent);
+            padding: 1rem;
+            border-radius: 4px;
+            margin-top: 1rem;
+        }
+
+        .recommendation strong {
+            color: #2e7d32;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .navbar {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            h2 {
+                font-size: 1.1rem;
+            }
+
+            .tabs {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <h1>🍺 RAPT Monitor</h1>
+        <div>
+            <span id="status" class="status-badge active">Ativo</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Current Batch Info -->
+        <div class="grid">
+            <div class="card">
+                <h2>📊 Batch Atual</h2>
+                <div class="metric">
+                    <span class="metric-label">Nome</span>
+                    <span id="batch-name" class="metric-value" style="font-size: 1rem;">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Levedura</span>
+                    <span id="yeast-profile" style="font-size: 0.9rem;">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Tempo de Fermentação</span>
+                    <span id="fermentation-time" style="font-size: 0.9rem;">-</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🌡️ Leitura Atual</h2>
+                <div class="metric">
+                    <span class="metric-label">Gravidade</span>
+                    <span id="gravity" class="metric-value">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Temperatura</span>
+                    <span id="temperature" class="metric-value temperature">-</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Bateria</span>
+                    <span id="battery" style="font-size: 0.9rem;">-</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>📈 Atenuação</h2>
+                <div class="stat-small">
+                    <div class="stat-small-value" id="attenuation">-%</div>
+                    <div class="stat-small-label">Atenuação Atual</div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="attenuation-bar" style="width: 0%;"></div>
+                </div>
+                <div style="font-size: 0.8rem; color: #666; margin-top: 0.5rem;">
+                    Meta: <span id="attenuation-target">80%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts Section -->
+        <div id="alerts-container"></div>
+
+        <!-- Charts -->
+        <div class="chart-wrapper">
+            <h2>📊 Gravidade vs Temperatura</h2>
+            <div class="chart-container">
+                <canvas id="fermentationChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Analysis -->
+        <div class="grid">
+            <div class="card">
+                <h2>🤖 Análise ML</h2>
+                <div id="ml-prediction" class="loading">
+                    <div class="spinner"></div>
+                    <p>Carregando análise...</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>✅ Checklist Diacetil Rest</h2>
+                <div id="checklist">
+                    <div style="padding: 1rem; color: #666;">Carregando...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="card" style="margin-top: 2rem;">
+            <h2>⚙️ Controles</h2>
+            <div class="buttons">
+                <button class="btn-primary" onclick="openNewBatchModal()">+ Nova Fermentação</button>
+                <button class="btn-secondary" onclick="refreshData()">🔄 Atualizar</button>
+                <button class="btn-secondary" onclick="exportData()">📥 Exportar CSV</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Batch Modal -->
+    <div id="newBatchModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Nova Fermentação</h2>
+                <button class="close-btn" onclick="closeModal('newBatchModal')">&times;</button>
+            </div>
+            <form onsubmit="createBatch(event)">
+                <div class="form-group">
+                    <label>Nome do Batch</label>
+                    <input type="text" id="batchName" required>
+                </div>
+                <div class="form-group">
+                    <label>Levedura</label>
+                    <select id="yeastProfile" required>
+                        <option value="">Selecionar...</option>
+                        <option value="ale">Ale</option>
+                        <option value="saison">Saison</option>
+                        <option value="lager">Lager</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>OG (Original Gravity)</label>
+                    <input type="number" id="og" step="0.001" required>
+                </div>
+                <div class="form-group">
+                    <label>FG Alvo (Final Gravity)</label>
+                    <input type="number" id="fg" step="0.001" required>
+                </div>
+                <div class="form-group">
+                    <label>Temperatura Alvo (°C)</label>
+                    <input type="number" id="tempTarget" step="0.1" required>
+                </div>
+                <div class="buttons">
+                    <button type="submit" class="btn-primary">Criar Fermentação</button>
+                    <button type="button" class="btn-secondary" onclick="closeModal('newBatchModal')">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/api';
+        let currentFermId = null;
+        let chart = null;
+
+        async function init() {
+            await refreshData();
+            setInterval(refreshData, 3600000); // Atualiza a cada hora
+        }
+
+        async function refreshData() {
+            try {
+                // Get active fermentation
+                const response = await axios.get(`${API_URL}/fermentations`);
+                if (response.data.length === 0) {
+                    document.getElementById('alerts-container').innerHTML = `
+                        <div class="card alert">
+                            <h3>⚠️ Nenhuma fermentação ativa</h3>
+                            <p>Crie uma nova fermentação para começar.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                currentFermId = response.data[0].id;
+                
+                // Get fermentation details
+                const fermResponse = await axios.get(`${API_URL}/fermentations/${currentFermId}`);
+                const ferm = fermResponse.data;
+
+                // Get readings
+                const readingsResponse = await axios.get(`${API_URL}/fermentations/${currentFermId}/readings?hours=72`);
+                const readings = readingsResponse.data;
+
+                // Get analysis
+                const analysisResponse = await axios.get(`${API_URL}/fermentations/${currentFermId}/analysis`);
+                const analysis = analysisResponse.data;
+
+                // Update UI
+                updateUI(ferm, readings, analysis);
+                updateChart(readings);
+                updateAlerts(analysis);
+                updateML(analysis);
+                updateChecklist(analysis);
+
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+            }
+        }
+
+        function updateUI(ferm, readings, analysis) {
+            document.getElementById('batch-name').textContent = ferm.batch_name;
+            document.getElementById('yeast-profile').textContent = ferm.yeast_profile.toUpperCase();
+            document.getElementById('attenuation-target').textContent = '80%';
+
+            if (readings.length > 0) {
+                const latest = readings[readings.length - 1];
+                document.getElementById('gravity').textContent = latest.gravity.toFixed(4);
+                document.getElementById('temperature').textContent = `${latest.temperature.toFixed(1)}°C`;
+                document.getElementById('battery').textContent = `${latest.battery}%`;
+                document.getElementById('attenuation').textContent = `${(latest.attenuation_percent * 100).toFixed(1)}%`;
+                document.getElementById('attenuation-bar').style.width = `${Math.min(latest.attenuation_percent * 100, 100)}%`;
+            }
+
+            const startDate = new Date(ferm.start_date);
+            const now = new Date();
+            const hours = Math.floor((now - startDate) / 3600000);
+            document.getElementById('fermentation-time').textContent = `${hours}h`;
+        }
+
+        function updateChart(readings) {
+            const ctx = document.getElementById('fermentationChart').getContext('2d');
+            
+            if (chart) {
+                chart.destroy();
+            }
+
+            const times = readings.map(r => new Date(r.timestamp).toLocaleString('pt-BR'));
+            const gravities = readings.map(r => r.gravity);
+            const temps = readings.map(r => r.temperature);
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: times,
+                    datasets: [
+                        {
+                            label: 'Gravidade',
+                            data: gravities,
+                            borderColor: '#3498db',
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            yAxisID: 'y',
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Temperatura (°C)',
+                            data: temps,
+                            borderColor: '#e67e22',
+                            backgroundColor: 'rgba(230, 126, 34, 0.1)',
+                            yAxisID: 'y1',
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Gravidade'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Temperatura (°C)'
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                        },
+                    }
+                }
+            });
+        }
+
+        function updateAlerts(analysis) {
+            const container = document.getElementById('alerts-container');
+            container.innerHTML = '';
+
+            if (analysis.alerts_triggered && analysis.alerts_triggered.length > 0) {
+                analysis.alerts_triggered.forEach(alert => {
+                    let message = '';
+                    let cssClass = 'alert-success';
+
+                    if (alert.type === 'attenuation_reached') {
+                        message = `✅ <strong>Atenuação Atingida!</strong> ${alert.value.toFixed(1)}% (meta: ${alert.threshold.toFixed(1)}%)`;
+                    } else if (alert.type === 'gravity_stable') {
+                        message = `✅ <strong>Gravidade Estável</strong> Variação de ${alert.variation.toFixed(4)} nas últimas ${alert.hours}h`;
+                    } else if (alert.type === 'temperature_descended') {
+                        message = `📉 <strong>Temperatura Descendo</strong> Queda de ${alert.descent.toFixed(1)}°C nas últimas ${alert.hours}h`;
+                    }
+
+                    container.innerHTML += `<div class="card ${cssClass}"><div class="alert-message success">${message}</div></div>`;
+                });
+            }
+        }
+
+        function updateML(analysis) {
+            const container = document.getElementById('ml-prediction');
+            
+            const pred = analysis.alerts_triggered?.find(a => a.type === 'ml_prediction');
+            if (pred) {
+                container.innerHTML = `
+                    <div class="stat-small">
+                        <div class="stat-small-value">${pred.hours_to_target.toFixed(1)}h</div>
+                        <div class="stat-small-label">Tempo até FG</div>
+                    </div>
+                    <div class="stat-small" style="margin-top: 1rem;">
+                        <div class="stat-small-value">${pred.predicted_fg.toFixed(4)}</div>
+                        <div class="stat-small-label">FG Predito</div>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = '<p style="color: #666;">Dados insuficientes para predição</p>';
+            }
+        }
+
+        function updateChecklist(analysis) {
+            const container = document.getElementById('checklist');
+            const checks = [
+                { name: 'Atenuação ≥ 80%', done: analysis.current_attenuation >= 80 },
+                { name: 'Gravidade estável', done: analysis.alerts_triggered?.some(a => a.type === 'gravity_stable') },
+                { name: 'Temperatura descendo', done: analysis.alerts_triggered?.some(a => a.type === 'temperature_descended') }
+            ];
+
+            container.innerHTML = checks.map(c => `
+                <div style="padding: 0.5rem; display: flex; gap: 0.5rem;">
+                    <span>${c.done ? '✅' : '⏳'}</span>
+                    <span>${c.name}</span>
+                </div>
+            `).join('');
+
+            if (checks.every(c => c.done)) {
+                container.innerHTML += `
+                    <div class="recommendation">
+                        <strong>🎯 Recomendação:</strong> Elevar temperatura para 24-25°C para descanso de diacetil por 48-72h
+                    </div>
+                `;
+            }
+        }
+
+        function openNewBatchModal() {
+            document.getElementById('newBatchModal').classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        async function createBatch(event) {
+            event.preventDefault();
+
+            try {
+                const data = {
+                    batch_name: document.getElementById('batchName').value,
+                    yeast_profile: document.getElementById('yeastProfile').value,
+                    og: parseFloat(document.getElementById('og').value),
+                    fg_target: parseFloat(document.getElementById('fg').value),
+                    temp_target: parseFloat(document.getElementById('tempTarget').value),
+                    start_date: new Date().toISOString(),
+                    status: 'active'
+                };
+
+                await axios.post(`${API_URL}/fermentations`, data);
+                closeModal('newBatchModal');
+                await refreshData();
+            } catch (error) {
+                alert('Erro ao criar fermentação: ' + error.message);
+            }
+        }
+
+        async function exportData() {
+            if (!currentFermId) return;
+
+            try {
+                const response = await axios.get(`${API_URL}/fermentations/${currentFermId}/readings?hours=720`);
+                const readings = response.data;
+
+                let csv = 'Timestamp,Gravidade,Temperatura,Atenuação%,Bateria\n';
+                readings.forEach(r => {
+                    csv += `${r.timestamp},${r.gravity},${r.temperature},${(r.attenuation_percent * 100).toFixed(1)}\n`;
+                });
+
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `batch-${currentFermId}-export.csv`;
+                a.click();
+            } catch (error) {
+                alert('Erro ao exportar: ' + error.message);
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
