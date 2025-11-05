@@ -469,10 +469,22 @@ if __name__ == "__main__":
 @app.post("/webhook/telegram")
 async def telegram_webhook(update: dict):
     """Recebe mensagens do Telegram"""
-    message = update.get("message", {})
-    text = message.get("text", "")
-    chat_id = message.get("chat", {}).get("id")
-    
-    if text == "/start":
-        # Responder
-        await send_telegram_message(chat_id, "🍺 Bem-vindo ao RAPT Monitor!")
+    try:
+        message = update.get("message", {})
+        text = message.get("text", "")
+        chat_id = message.get("chat", {}).get("id")
+        
+        if text and text.startswith("/"):
+            if "/start" in text:
+                await send_telegram_message(
+                    chat_id, 
+                    "🍺 Bem-vindo ao RAPT Monitor!\n\n/status - Ver status\n/help - Ajuda"
+                )
+            elif "/status" in text:
+                await send_telegram_message(chat_id, "✅ Sistema online!")
+                
+        return {"ok": True}
+    except Exception as e:
+        print(f"Erro no webhook: {e}")
+        return {"ok": False, "error": str(e)}
+
