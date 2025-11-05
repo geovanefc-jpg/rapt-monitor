@@ -10,7 +10,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
 from typing import Optional, List
-import numpy as np
 from sklearn.linear_model import LinearRegression
 from dotenv import load_dotenv
 import asyncio
