@@ -309,7 +309,6 @@ async def send_telegram_alert(message: str, batch_id: int):
         
     except Exception as e:
         print(f"❌ Erro ao enviar alerta: {e}")
-
 # ============== API ENDPOINTS ==============
 @app.on_event("startup")
 async def startup():
