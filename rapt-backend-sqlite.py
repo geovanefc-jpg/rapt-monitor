@@ -455,11 +455,9 @@ Elevar temperatura para descanso de diacetil por 48-72h
 
 @app.get("/api/fermentations/{ferm_id}/analysis")
 async def get_analysis(ferm_id: int):
-    """Get análise"""
     alert_config = AlertConfig()
     return analyze_fermentation(ferm_id, alert_config)
 
-# ============== TELEGRAM WEBHOOK ==============
 @app.post("/webhook/telegram")
 async def telegram_webhook(update: dict):
     """Recebe mensagens do Telegram via webhook"""
@@ -482,8 +480,13 @@ async def telegram_webhook(update: dict):
         else:
             msg = f"Recebi: {text}"
         
-        # Enviar resposta
-        await send_telegram_message(chat_id, msg)
+        # Enviar resposta via API do Telegram
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+                json={"chat_id": chat_id, "text": msg}
+            )
+        
         return {"ok": True}
         
     except Exception as e:
