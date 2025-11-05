@@ -459,32 +459,42 @@ async def get_analysis(ferm_id: int):
     alert_config = AlertConfig()
     return analyze_fermentation(ferm_id, alert_config)
 
+# ============== TELEGRAM WEBHOOK ==============
+@app.post("/webhook/telegram")
+async def telegram_webhook(update: dict):
+    """Recebe mensagens do Telegram via webhook"""
+    try:
+        message = update.get("message", {})
+        text = message.get("text", "")
+        chat_id = message.get("chat", {}).get("id")
+        
+        print(f"📨 Mensagem recebida: {text}")
+        
+        if not text:
+            return {"ok": True}
+        
+        if "/start" in text:
+            msg = "🍺 Bem-vindo ao RAPT Monitor!\n\n/status - Ver status\n/help - Ajuda"
+        elif "/status" in text:
+            msg = "✅ Sistema online e funcionando!"
+        elif "/help" in text:
+            msg = "🆘 Comandos disponíveis:\n/start\n/status\n/help"
+        else:
+            msg = f"Recebi: {text}"
+        
+        # Enviar resposta
+        await send_telegram_message(chat_id, msg)
+        return {"ok": True}
+        
+    except Exception as e:
+        print(f"❌ Erro no webhook: {e}")
+        return {"ok": False, "error": str(e)}
+
+
 if __name__ == "__main__":
     import uvicorn
     print("\n🍺 Iniciando RAPT Monitor com SQLite...")
     print("=" * 50)
     uvicorn.run(app, host="0.0.0.0", port=8000)
 
-
-@app.post("/webhook/telegram")
-async def telegram_webhook(update: dict):
-    """Recebe mensagens do Telegram"""
-    try:
-        message = update.get("message", {})
-        text = message.get("text", "")
-        chat_id = message.get("chat", {}).get("id")
-        
-        if text and text.startswith("/"):
-            if "/start" in text:
-                await send_telegram_message(
-                    chat_id, 
-                    "🍺 Bem-vindo ao RAPT Monitor!\n\n/status - Ver status\n/help - Ajuda"
-                )
-            elif "/status" in text:
-                await send_telegram_message(chat_id, "✅ Sistema online!")
-                
-        return {"ok": True}
-    except Exception as e:
-        print(f"Erro no webhook: {e}")
-        return {"ok": False, "error": str(e)}
 
