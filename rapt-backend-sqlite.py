@@ -464,3 +464,15 @@ if __name__ == "__main__":
     print("\n🍺 Iniciando RAPT Monitor com SQLite...")
     print("=" * 50)
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+@app.post("/webhook/telegram")
+async def telegram_webhook(update: dict):
+    """Recebe mensagens do Telegram"""
+    message = update.get("message", {})
+    text = message.get("text", "")
+    chat_id = message.get("chat", {}).get("id")
+    
+    if text == "/start":
+        # Responder
+        await send_telegram_message(chat_id, "🍺 Bem-vindo ao RAPT Monitor!")
