@@ -388,10 +388,37 @@ async def get_readings(ferm_id: int, hours: int = 24):
     return readings
 
 @app.post("/api/readings/ingest")
-async def ingest_reading(reading: RAPTReading, background_tasks: BackgroundTasks):
-    """Ingerir leitura"""
-    conn = get_db()
-    cursor = conn.cursor()
+async def ingest_reading(request: dict):
+    """Ingerir leitura - aceita qualquer formato"""
+    try:
+        # Aceitar múltiplos formatos
+        timestamp = (
+            request.get("timestamp") or
+            request.get("ts") or
+            request.get("time") or
+            datetime.now().isoformat()
+        )
+        
+        gravity = float(request.get("gravity") or request.get("sg") or 0)
+        temperature = float(request.get("temperature") or request.get("temp") or 0)
+        battery = int(request.get("battery") or request.get("bat") or 100)
+        device_id = request.get("device_id") or request.get("deviceId") or ""
+        
+        print(f"📊 Reading recebida: gravity={gravity}, temp={temperature}°C")
+        
+        # Salvar no banco
+        cursor = db.cursor()
+        cursor.execute("""
+            INSERT INTO readings (timestamp, gravity, temperature, battery, device_id)
+            VALUES (?, ?, ?, ?, ?)
+        """, (timestamp, gravity, temperature, battery, device_id))
+        db.commit()
+        
+        return {"ok": True, "message": "Reading saved"}
+    except Exception as e:
+        print(f"❌ Erro: {e}")
+        return {"ok": False, "error": str(e)}
+
     
     # Get active fermentation
     cursor.execute("SELECT id, og FROM fermentations WHERE status = 'active' ORDER BY start_date DESC LIMIT 1")
