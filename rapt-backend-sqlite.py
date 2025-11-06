@@ -420,6 +420,37 @@ async def ingest_reading(request: dict):
         return {"ok": False, "error": str(e)}
 
     
+
+@app.get("/api/readings")
+async def get_readings(limit: int = 100):
+    """Listar últimas readings"""
+    try:
+        cursor = db.cursor()
+        cursor.execute("""
+            SELECT * FROM readings 
+            ORDER BY timestamp DESC 
+            LIMIT ?
+        """, (limit,))
+        
+        rows = cursor.fetchall()
+        readings = []
+        
+        for row in rows:
+            readings.append({
+                "id": row[0],
+                "timestamp": row[1],
+                "gravity": row[2],
+                "temperature": row[3],
+                "battery": row[4],
+                "device_id": row[5]
+            })
+        
+        return {"ok": True, "count": len(readings), "readings": readings}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+
     # Get active fermentation
     cursor.execute("SELECT id, og FROM fermentations WHERE status = 'active' ORDER BY start_date DESC LIMIT 1")
     ferm_result = cursor.fetchone()
